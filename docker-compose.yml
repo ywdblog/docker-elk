@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.3.0
+    container_name: es
+    #entrypoint: ./docker-entrypoint-es-plugins.sh
+    #command:
+      #/bin/sh -c "./bin/elasticsearch-plugin install analysis-icu;./bin/elasticsearch-plugin install https://github.com/medcl/elasticsearch-analysis-pinyin/releases/download/v7.3.0/elasticsearch-analysis-pinyin-7.3.0.zip; /usr/local/bin/docker-entrypoint.sh"
+    environment:
+      - node.name=es
+      - cluster.name=es-docker-cluster
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./es/data:/usr/share/elasticsearch/data
+      - ./es/config/analysis-hanlp/hanlp.properties:/usr/share/elasticsearch/config/analysis-hanlp/hanlp.properties
+      - ./es/config/analysis-hanlp/hanlp-remote.xml:/usr/share/elasticsearch/config/analysis-hanlp/hanlp-remote.xml
+      - ./es/logs:/usr/share/elasticsearch/logs
+      - ./es/plugins:/usr/share/elasticsearch/plugins
+    ports:
+      - 9200:9200
+    networks:
+      - xwjn
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.3.0
+    container_name: kibana
+    environment:
+      - SERVER_NAME=kibana
+      - ELASTICSEARCH_HOSTS="http://es:9200"
+      - XPACK_MONITORING_ENABLED=true
+    ports:
+      - 5601:5601
+    networks:
+      - xwjn
+      - xwjw
+    depends_on:
+      - es
+
+  cerebro:
+    image: lmenezes/cerebro:0.8.5
+    container_name: cerebro
+    ports:
+      - 9000:9000
+    command:
+      - -Dhosts.0.host=http://es:9200
+    networks:
+      - xwjn
+      - xwjw
+    depends_on:
+      - es 
+
+networks:
+  xwjw:
+    driver: bridge
+  xwjn:
+    driver: bridge
+    internal: false
+ 
